@@ -30,13 +30,134 @@ const isAuthenticated = (req, res, next) => {
   }
 };
 
+// Helper function to get theme CSS style
+const getThemeStyle = (theme) => {
+  if (theme === 'dark') {
+    return `
+      background-color: #1e1e1e;
+      color: #ffffff;
+    `;
+  }
+  return `
+    background-color: #ffffff;
+    color: #000000;
+  `;
+};
+
+// Helper function to generate common CSS for all pages
+const getCommonStyles = (theme) => {
+  const isDark = theme === 'dark';
+  const bgColor = isDark ? '#1e1e1e' : '#ffffff';
+  const textColor = isDark ? '#ffffff' : '#000000';
+  const borderColor = isDark ? '#444' : '#ddd';
+  const inputBg = isDark ? '#333' : '#fff';
+  const inputBorder = isDark ? '#555' : '#ccc';
+  const infoItemBg = isDark ? '#2a2a2a' : '#f5f5f5';
+  const labelColor = isDark ? '#ccc' : '#333';
+  const valueColor = isDark ? '#66bb6a' : '#0056b3';
+  
+  return `
+    body {
+      background-color: ${bgColor};
+      color: ${textColor};
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+    
+    h1, h3 {
+      color: ${textColor};
+    }
+    
+    input[type="text"],
+    input[type="password"],
+    input[type="email"] {
+      background-color: ${inputBg};
+      color: ${textColor};
+      border: 1px solid ${inputBorder};
+      padding: 8px;
+      margin: 10px 0;
+      box-sizing: border-box;
+      border-radius: 3px;
+    }
+    
+    a {
+      margin-right: 10px;
+      padding: 5px 10px;
+      background-color: #007bff;
+      color: white;
+      text-decoration: none;
+      border-radius: 3px;
+      display: inline-block;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+    
+    a:hover {
+      background-color: #0056b3;
+    }
+    
+    button {
+      width: 100%;
+      padding: 10px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background-color 0.2s ease;
+    }
+    
+    button:hover {
+      background-color: #0056b3;
+    }
+    
+    hr {
+      border-color: ${borderColor};
+    }
+    
+    .info-item {
+      margin: 15px 0;
+      padding: 10px;
+      background-color: ${infoItemBg};
+      border-left: 4px solid #007bff;
+      border-radius: 3px;
+    }
+    
+    .info-label {
+      font-weight: bold;
+      color: ${labelColor};
+    }
+    
+    .info-value {
+      color: ${valueColor};
+      font-size: 16px;
+    }
+    
+    a.logout {
+      background-color: #dc3545;
+    }
+    
+    a.logout:hover {
+      background-color: #c82333;
+    }
+    
+    li {
+      margin: 10px 0;
+    }
+  `;
+};
+
 // Route: Trang chủ /
 app.get('/', (req, res) => {
   const theme = req.cookies.theme || 'light';
+  const commonStyles = getCommonStyles(theme);
+  const isLoggedIn = req.session.username ? true : false;
   
   let content = '<h1>Mini Profile App</h1>';
   
-  if (req.session.username) {
+  if (isLoggedIn) {
     content += `<p>Xin chào, ${req.session.username}</p>`;
   } else {
     content += '<p>Bạn chưa đăng nhập</p>';
@@ -48,46 +169,35 @@ app.get('/', (req, res) => {
     ? '<li><a href="/set-theme/light">🌞 Chế độ sáng</a></li>'
     : '<li><a href="/set-theme/dark">🌙 Chế độ tối</a></li>';
   
+  // Build menu based on login status
+  let menu = '<ul>';
+  
+  if (!isLoggedIn) {
+    menu += '<li><a href="/login">Đăng nhập</a></li>';
+  } else {
+    menu += '<li><a href="/profile">Trang cá nhân</a></li>';
+  }
+  
+  menu += themeOption;
+  
+  if (isLoggedIn) {
+    menu += '<li><a href="/logout">Đăng xuất</a></li>';
+  }
+  
+  menu += '</ul>';
+  
   content += `
     <hr>
     <h3>Chức năng:</h3>
-    <ul>
-      <li><a href="/login">Đăng nhập</a></li>
-      <li><a href="/profile">Trang cá nhân</a></li>
-      ${themeOption}
-      <li><a href="/logout">Đăng xuất</a></li>
-    </ul>
+    ${menu}
   `;
-  
-  // Apply theme styling
-  let style = theme === 'dark' 
-    ? 'background-color: #1e1e1e; color: #ffffff;' 
-    : 'background-color: #ffffff; color: #000000;';
   
   res.send(`
     <html>
     <head>
       <title>Mini Profile App</title>
       <style>
-        body {
-          ${style}
-          font-family: Arial, sans-serif;
-          padding: 20px;
-        }
-        a {
-          margin-right: 10px;
-          padding: 5px 10px;
-          background-color: #007bff;
-          color: white;
-          text-decoration: none;
-          border-radius: 3px;
-        }
-        a:hover {
-          background-color: #0056b3;
-        }
-        li {
-          margin: 10px 0;
-        }
+        ${commonStyles}
       </style>
     </head>
     <body>
@@ -118,44 +228,35 @@ app.get('/set-theme/:theme', (req, res) => {
 
 // Route: Đăng nhập /login
 app.get('/login', (req, res) => {
+  const theme = req.cookies.theme || 'light';
+  const commonStyles = getCommonStyles(theme);
+  
+  // Nếu đã đăng nhập, redirect về profile
+  if (req.session.username) {
+    return res.redirect('/profile');
+  }
+  
   res.send(`
     <html>
     <head>
       <title>Đăng nhập</title>
       <style>
-        body {
-          font-family: Arial, sans-serif;
+        ${commonStyles}
+        .login-container {
           max-width: 300px;
           margin: 50px auto;
-        }
-        input[type="text"] {
-          width: 100%;
-          padding: 8px;
-          margin: 10px 0;
-          box-sizing: border-box;
-        }
-        button {
-          width: 100%;
-          padding: 10px;
-          background-color: #007bff;
-          color: white;
-          border: none;
-          border-radius: 3px;
-          cursor: pointer;
-          font-size: 16px;
-        }
-        button:hover {
-          background-color: #0056b3;
         }
       </style>
     </head>
     <body>
-      <h1>Đăng nhập</h1>
-      <form method="POST" action="/login">
-        <input type="text" name="username" placeholder="Nhập username" required>
-        <button type="submit">Đăng nhập</button>
-      </form>
-      <a href="/">← Quay lại trang chủ</a>
+      <div class="login-container">
+        <h1>Đăng nhập</h1>
+        <form method="POST" action="/login">
+          <input type="text" name="username" placeholder="Nhập username" required>
+          <button type="submit">Đăng nhập</button>
+        </form>
+        <a href="/">← Quay lại trang chủ</a>
+      </div>
     </body>
     </html>
   `);
@@ -182,6 +283,9 @@ app.post('/login', (req, res) => {
 
 // Route: Trang cá nhân /profile
 app.get('/profile', isAuthenticated, (req, res) => {
+  const theme = req.cookies.theme || 'light';
+  const commonStyles = getCommonStyles(theme);
+  
   // Tăng bộ đếm truy cập
   req.session.profileVisitCount = (req.session.profileVisitCount || 0) + 1;
   
@@ -192,73 +296,43 @@ app.get('/profile', isAuthenticated, (req, res) => {
     <head>
       <title>Trang cá nhân</title>
       <style>
-        body {
-          font-family: Arial, sans-serif;
+        ${commonStyles}
+        .profile-container {
           max-width: 400px;
           margin: 50px auto;
           padding: 20px;
-          border: 1px solid #ddd;
+          border: 1px solid ${theme === 'dark' ? '#444' : '#ddd'};
           border-radius: 5px;
-        }
-        .info-item {
-          margin: 15px 0;
-          padding: 10px;
-          background-color: #f5f5f5;
-          border-left: 4px solid #007bff;
-        }
-        .info-label {
-          font-weight: bold;
-          color: #333;
-        }
-        .info-value {
-          color: #0056b3;
-          font-size: 16px;
-        }
-        a {
-          display: inline-block;
-          margin: 10px 5px 10px 0;
-          padding: 8px 15px;
-          background-color: #007bff;
-          color: white;
-          text-decoration: none;
-          border-radius: 3px;
-        }
-        a:hover {
-          background-color: #0056b3;
-        }
-        a.logout {
-          background-color: #dc3545;
-        }
-        a.logout:hover {
-          background-color: #c82333;
         }
       </style>
     </head>
     <body>
-      <h1>Trang cá nhân</h1>
-      
-      <div class="info-item">
-        <div class="info-label">Username:</div>
-        <div class="info-value">${req.session.username}</div>
+      <div class="profile-container">
+        <h1>Trang cá nhân</h1>
+        
+        <div class="info-item">
+          <div class="info-label">Username:</div>
+          <div class="info-value">${req.session.username}</div>
+        </div>
+        
+        <div class="info-item">
+          <div class="info-label">Thời điểm đăng nhập:</div>
+          <div class="info-value">${req.session.loginTime}</div>
+        </div>
+        
+        <div class="info-item">
+          <div class="info-label">Số lần đã truy cập trang này:</div>
+          <div class="info-value">${visitCount} lần</div>
+        </div>
+        
+        <hr>
+        <div>
+          <p><em>Mỗi lần F5 bộ đếm sẽ tăng lên 1</em></p>
+        </div>
+        
+        <a href="/">← Quay lại trang chủ</a>
+        <a href="/logout" class="logout">Đăng xuất</a>
       </div>
-      
-      <div class="info-item">
-        <div class="info-label">Thời điểm đăng nhập:</div>
-        <div class="info-value">${req.session.loginTime}</div>
-      </div>
-      
-      <div class="info-item">
-        <div class="info-label">Số lần đã truy cập trang này:</div>
-        <div class="info-value">${visitCount} lần</div>
-      </div>
-      
-      <hr>
-      <div>
-        <p><em>Mỗi lần F5 bộ đếm sẽ tăng lên 1</em></p>
-      </div>
-      
-      <a href="/">← Quay lại trang chủ</a>
-      <a href="/logout" class="logout">Đăng xuất</a>
     </body>
     </html>
   `);

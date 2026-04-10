@@ -43,14 +43,18 @@ app.get('/', (req, res) => {
   }
   
   content += `<p>Theme hiện tại: <strong>${theme}</strong></p>`;
+  
+  let themeOption = theme === 'dark' 
+    ? '<li><a href="/set-theme/light">🌞 Chế độ sáng</a></li>'
+    : '<li><a href="/set-theme/dark">🌙 Chế độ tối</a></li>';
+  
   content += `
     <hr>
     <h3>Chức năng:</h3>
     <ul>
       <li><a href="/login">Đăng nhập</a></li>
       <li><a href="/profile">Trang cá nhân</a></li>
-      <li><a href="/set-theme/light">🌞 Chế độ sáng</a></li>
-      <li><a href="/set-theme/dark">🌙 Chế độ tối</a></li>
+      ${themeOption}
       <li><a href="/logout">Đăng xuất</a></li>
     </ul>
   `;
@@ -108,11 +112,8 @@ app.get('/set-theme/:theme', (req, res) => {
     httpOnly: false
   });
   
-  res.send(`
-    <p>Đã lưu theme: <strong>${theme}</strong></p>
-    <p>Cookie sẽ tồn tại trong 10 phút</p>
-    <a href="/">← Quay lại trang chủ</a>
-  `);
+  // Redirect về trang chủ
+  res.redirect('/');
 });
 
 // Route: Đăng nhập /login
@@ -270,7 +271,7 @@ app.get('/logout', (req, res) => {
     if (err) {
       return res.status(500).send('Lỗi khi đăng xuất');
     }
-    res.redirect('/login');
+    res.redirect('/');
   });
 });
 
